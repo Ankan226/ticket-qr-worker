@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Ticket QR Code Generator Worker: Architecture</title>
+  <meta name="description" content="Database schema (ERD) and API contracts for the Ticket QR Code Generator Worker." />
+  <link rel="icon" href="data:," />
+  <style>
+    :root {
+      --ink: #111111;
+      --paper: #ffffff;
+      --line: #d4d4d4;
+      --muted: #595959;
+      --space-1: 16px;
+      --space-2: 32px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, "Segoe UI", Arial, sans-serif;
+      color: var(--ink);
+      background: var(--paper);
+      line-height: 1.5;
+    }
+
+    .skip-link {
+      position: absolute;
+      left: var(--space-1);
+      top: -100px;
+      background: var(--ink);
+      color: var(--paper);
+      padding: var(--space-1);
+    }
+
+    .skip-link:focus {
+      top: var(--space-1);
+    }
+
+    header,
+    main,
+    footer {
+      max-width: 960px;
+      margin: 0 auto;
+      padding: var(--space-2) var(--space-1);
+    }
+
+    header {
+      border-bottom: 1px solid var(--line);
+    }
+
+    h1,
+    h2 {
+      margin: 0 0 var(--space-1);
+    }
+
+    p {
+      margin: 0 0 var(--space-1);
+    }
+
+    .muted {
+      color: var(--muted);
+    }
+
+    section {
+      margin-bottom: var(--space-2);
+    }
+
+    .scroll {
+      overflow-x: auto;
+      border: 1px solid var(--line);
+      padding: var(--space-1);
+    }
+
+    table {
+      border-collapse: collapse;
+      width: 100%;
+    }
+
+    th,
+    td {
+      text-align: left;
+      padding: var(--space-1);
+      border-bottom: 1px solid var(--line);
+    }
+
+    th {
+      background: var(--paper);
+    }
+
+    code {
+      font-family: ui-monospace, Consolas, monospace;
+    }
+
+    a {
+      color: var(--ink);
+    }
+
+    a:focus,
+    button:focus {
+      outline: 3px solid var(--ink);
+      outline-offset: 2px;
+    }
+  </style>
+</head>
+
+<body>
+  <a class="skip-link" href="#main">Skip to main content</a>
+
+  <header>
+    <h1>Ticket QR Code Generator Worker</h1>
+    <p class="muted">Ticket ENG-139055 &middot; Architecture deliverable: ERD and API contracts</p>
+  </header>
+
+  <main id="main">
+    <section aria-labelledby="erd-heading">
+      <h2 id="erd-heading">Entity Relationship Diagram</h2>
+      <div class="scroll" role="img"
+        aria-label="Entity relationship diagram showing staff, events, tickets, QR jobs, QR codes, scan logs and analytics events and how they relate">
+        <pre class="mermaid">
+erDiagram
+    STAFF ||--o{ EVENTS : creates
+    STAFF ||--o{ TICKETS : issues
+    STAFF ||--o{ QR_JOBS : requests
+    STAFF ||--o{ SCAN_LOGS : performs
+    STAFF ||--o{ ANALYTICS_EVENTS : triggers
+    EVENTS ||--o{ TICKETS : contains
+    TICKETS ||--o{ QR_JOBS : "has jobs"
+    TICKETS ||--o{ QR_CODES : owns
+    QR_JOBS ||--o| QR_CODES : produces
+    QR_CODES ||--o{ SCAN_LOGS : "is scanned in"
+        </pre>
+      </div>
+      <noscript>
+        <p>Enable JavaScript to view the diagram, or read docs/ERD.md in the repository.</p>
+      </noscript>
+    </section>
+
+    <section aria-labelledby="api-heading">
+      <h2 id="api-heading">API Contracts</h2>
+      <p class="muted">Full definitions live in <code>api/openapi.yaml</code>.</p>
+      <div class="scroll">
+        <table>
+          <caption class="muted">Planned endpoints (base path /api/v1)</caption>
+          <thead>
+            <tr>
+              <th scope="col">Method</th>
+              <th scope="col">Path</th>
+              <th scope="col">Purpose</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>GET</td>
+              <td><code>/events/{eventId}/tickets</code></td>
+              <td>List tickets (empty list when none)</td>
+            </tr>
+            <tr>
+              <td>POST</td>
+              <td><code>/tickets</code></td>
+              <td>Create a ticket (422 on invalid input)</td>
+            </tr>
+            <tr>
+              <td>POST</td>
+              <td><code>/tickets/{ticketId}/qr-jobs</code></td>
+              <td>Request QR generation (idempotent)</td>
+            </tr>
+            <tr>
+              <td>GET</td>
+              <td><code>/qr-jobs/{jobId}</code></td>
+              <td>Poll job status</td>
+            </tr>
+            <tr>
+              <td>GET</td>
+              <td><code>/tickets/{ticketId}/qr</code></td>
+              <td>Get active QR code</td>
+            </tr>
+            <tr>
+              <td>POST</td>
+              <td><code>/qr-scans</code></td>
+              <td>Validate a scan at the gate</td>
+            </tr>
+            <tr>
+              <td>POST</td>
+              <td><code>/analytics</code></td>
+              <td>Record telemetry ping</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <footer class="muted">
+    <p>Owner: Ankan Pal &middot; Tech Lead: Deepika Kumari</p>
+  </footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.min.js"></script>
+  <script>
+    if (window.mermaid) {
+      window.mermaid.initialize({ startOnLoad: true, theme: "neutral" });
+    }
+  </script>
+</body>
+
+</html>
